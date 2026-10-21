@@ -12,6 +12,7 @@ import { Profile } from './pages/Profile'
 import { MovieDetail } from './pages/MovieDetail'
 import { TvDetail } from './pages/TvDetail'
 import { SelectMember } from './pages/SelectMember'
+import { Sports } from './pages/Sports'
 import { Footer } from './components/Footer'
 import { Header } from './components/Header'
 
@@ -20,6 +21,7 @@ function App() {
     <>
       <Header />
       <Routes>
+        <Route path="/sports" element={<Sports />} />
         <Route path="/" element={<Home />} />
         <Route path="/movie" element={<Movie />} />
         <Route path="/series" element={<Series />} />

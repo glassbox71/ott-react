@@ -1,0 +1,33 @@
+// Merge these match blocks inside your existing service cloud.firestore /
+// match /databases/{database}/documents block. Do not replace existing rules.
+match /sportsBroadcasts/{gameId} {
+  allow read: if true;
+  allow write: if false; // Publish broadcasts through an authorized Admin SDK.
+}
+match /sportsRooms/{gameId}/messages/{messageId} {
+  allow read: if request.auth != null;
+  allow create: if request.auth != null
+    && request.resource.data.keys().hasOnly(['uid', 'name', 'text', 'createdAt'])
+    && request.resource.data.uid == request.auth.uid
+    && request.resource.data.name is string
+    && request.resource.data.name.size() > 0
+    && request.resource.data.name.size() <= 30
+    && request.resource.data.text is string
+    && request.resource.data.text.size() > 0
+    && request.resource.data.text.size() <= 300
+    && request.resource.data.createdAt == request.time;
+  allow update, delete: if false;
+}
+match /sportsRooms/{gameId}/presence/{sessionId} {
+  allow read: if request.auth != null;
+  allow create: if request.auth != null
+    && request.resource.data.keys().hasOnly(['uid', 'lastSeen'])
+    && request.resource.data.uid == request.auth.uid
+    && request.resource.data.lastSeen == request.time;
+  allow update: if request.auth != null
+    && resource.data.uid == request.auth.uid
+    && request.resource.data.keys().hasOnly(['uid', 'lastSeen'])
+    && request.resource.data.uid == request.auth.uid
+    && request.resource.data.lastSeen == request.time;
+  allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+}
