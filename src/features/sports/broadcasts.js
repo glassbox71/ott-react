@@ -1,44 +1,37 @@
-export const FIFA_CHANNEL_ID = 'UCpcTrCXblq78GZrTUTLWeBw';
-
-// A channel entry attempts YouTube's current-live player without claiming that
-// a match is currently on air. Video-specific LIVE entries require API evidence.
-export const fifaChannel = {
-  id: 'football-fifa-channel', sport: 'football', channel: true, live: false,
-  title: 'FIFA 공식 채널 라이브', home: 'FIFA', away: '공식 채널',
-  venue: 'FIFA 공식 YouTube 채널', status: '방송 확인',
-  streamUrl: `https://www.youtube.com/embed/live_stream?channel=${FIFA_CHANNEL_ID}`,
-  watchUrl: 'https://www.youtube.com/@FIFA/streams',
+export const officialChannels = {
+  wbsc: { handle: '@WBSC', id: 'UC-UXjExO348UiOCxazH69hA', name: 'WBSC', sport: 'baseball' },
+  fifa: { handle: '@FIFA', id: 'UCpcTrCXblq78GZrTUTLWeBw', name: 'FIFA', sport: 'football' },
 };
 
-const unrelated = /shorts|simulat|e[ -]?football|gameplay|gaming|ea sports|madden|\bnfl\b|mascot|vibrato|ballon|watch.?along|talksport|commentary|reaction|fc ?2[5-9]|live.?score|score.?only|virtual|spider.?man|tarkov|flag football|tackle|swac|cfp|dynasty|fantasy|postgame|recap|analysis|auctions|breaks|warzone|국정감사|기자회견|해설|시뮬레이션|게임/i;
+const notGame = /shorts|분석|최종조합|스포츠토토|바카라|betting|predictions|webcam|baseball field|stadium cam|24\/7|cctv|yakuza|야쿠자|용과.?같이|プロスピ|パワプロ|mlb the show|out of the park|\bootp\b|simulat|actionsims|\bsims?\b|first look|fact.?check|podcast|on life support|talk.?show|radio|discussion|scoreboard|gameplay|gaming|watch.?along|commentary|reaction|live.?score|score.?only|virtual|highlights|postgame|recap|analysis|sportscards|livebreaks|auctions|breaks|bowman|monster jam|fantasy|softball|해설|하이라이트|시뮬레이션|게임|소프트볼/i;
 
-export function verifiedBroadcasts(videos, channelId) {
-  return videos.filter(video => video.id && (!channelId || video.snippet?.channelId === channelId)
+export function verifiedBroadcasts(videos, { sport = 'baseball', channelId } = {}) {
+  return videos.filter(video => /^[\w-]+$/.test(video.id || '')
+    && (!channelId || video.snippet?.channelId === channelId)
     && video.snippet?.liveBroadcastContent === 'live'
-    && !unrelated.test(`${video.snippet.title} ${video.snippet.channelTitle || ''}`)
+    && !notGame.test(`${video.snippet.title} ${video.snippet.channelTitle || ''}`)
     && video.status?.embeddable === true && video.status.privacyStatus === 'public'
     && video.liveStreamingDetails?.actualStartTime && !video.liveStreamingDetails.actualEndTime)
-    .map(video => ({
-      id: `football-youtube-${video.id}`, sport: 'football', title: video.snippet.title,
-      home: video.snippet.channelTitle || '축구 중계', away: '공개 라이브', venue: video.snippet.channelTitle || 'YouTube',
-      live: true, status: 'Live', startsAt: video.liveStreamingDetails.actualStartTime,
-      thumbnail: video.snippet.thumbnails?.medium?.url || '',
-      viewers: Number(video.liveStreamingDetails.concurrentViewers) > 0 ? Number(video.liveStreamingDetails.concurrentViewers) : null,
-      streamUrl: `https://www.youtube.com/embed/${video.id}`,
-      watchUrl: `https://www.youtube.com/watch?v=${video.id}`,
-    })).sort((a, b) => (b.viewers || 0) - (a.viewers || 0));
-}
-
-export function verifiedFifaBroadcasts(videos, channelId) {
-  return verifiedBroadcasts(videos, channelId);
+    .map(video => {
+      const viewers = Number(video.liveStreamingDetails.concurrentViewers);
+      return {
+        id: `${sport}-youtube-${video.id}`, videoId: video.id, sport,
+        title: video.snippet.title, channel: video.snippet.channelTitle || 'YouTube',
+        thumbnail: video.snippet.thumbnails?.medium?.url || '',
+        viewers: Number.isFinite(viewers) && viewers >= 0 && video.liveStreamingDetails.concurrentViewers !== undefined ? viewers : null,
+        startsAt: video.liveStreamingDetails.actualStartTime,
+        watchUrl: `https://www.youtube.com/watch?v=${video.id}`,
+      };
+    }).sort((a, b) => (b.viewers ?? -1) - (a.viewers ?? -1));
 }
 
 const cache = new Map();
-export async function discoverBroadcasts(apiKey, signal, scope = 'football') {
+export async function discoverBroadcasts(apiKey, signal, scope = 'baseball') {
   if (!apiKey) throw new Error('YouTube API 설정이 필요합니다.');
+  if (scope !== 'baseball' && !officialChannels[scope]) throw new Error('지원하지 않는 중계 필터입니다.');
   const cacheKey = `${scope}:${apiKey}`;
   const cached = cache.get(cacheKey);
-  if (cached && Date.now() - cached.time < 300000) return cached.items;
+  if (cached && Date.now() - cached.checkedAt < 300000) return cached;
   async function request(resource, params) {
     const response = await fetch(`https://www.googleapis.com/youtube/v3/${resource}?${new URLSearchParams({ ...params, key: apiKey })}`, {
       signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000),
@@ -51,22 +44,23 @@ export async function discoverBroadcasts(apiKey, signal, scope = 'football') {
     }
     return response.json();
   }
-  let channelId;
-  if (scope === 'fifa') {
-    const channels = await request('channels', { part: 'id', forHandle: '@FIFA' });
-    channelId = channels.items?.[0]?.id;
-    if (channelId !== FIFA_CHANNEL_ID) throw new Error('FIFA 공식 채널을 확인하지 못했습니다.');
+  const official = officialChannels[scope];
+  if (official) {
+    const channels = await request('channels', { part: 'id', forHandle: official.handle });
+    if (channels.items?.[0]?.id !== official.id) throw new Error(`${official.name} 공식 채널을 확인하지 못했습니다.`);
   }
-  const criteria = channelId ? { channelId } : { q: '축구|soccer|"football match"|"football tournament" -shorts -simulation -efootball -mascot -NFL -Madden', relevanceLanguage: 'ko' };
+  const criteria = official ? { channelId: official.id, ...(scope === 'wbsc' ? { q: 'baseball|야구' } : {}) }
+    : { q: '야구|baseball -shorts -simulation -gameplay -highlights -watchalong', relevanceLanguage: 'ko' };
   const search = await request('search', { part: 'id', type: 'video', eventType: 'live', videoEmbeddable: 'true', maxResults: '50', order: 'viewCount', ...criteria });
   if (!Array.isArray(search.items)) throw new Error('라이브 검색 응답을 확인하지 못했습니다.');
-  const ids = search.items.map(item => item.id?.videoId).filter(Boolean);
+  const ids = [...new Set(search.items.map(item => item.id?.videoId).filter(Boolean))];
   let items = [];
   if (ids.length) {
     const videos = await request('videos', { part: 'snippet,status,liveStreamingDetails', id: ids.join(',') });
     if (!Array.isArray(videos.items)) throw new Error('영상 상태를 확인하지 못했습니다.');
-    items = verifiedBroadcasts(videos.items, channelId);
+    items = verifiedBroadcasts(videos.items, { sport: official?.sport || 'baseball', channelId: official?.id });
   }
-  cache.set(cacheKey, { time: Date.now(), items });
-  return items;
+  const result = { items, checkedAt: Date.now() };
+  cache.set(cacheKey, result);
+  return result;
 }

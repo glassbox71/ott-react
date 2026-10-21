@@ -1,36 +1,64 @@
-# 스포츠 페이지 연결
+# 야구 라이브 /sports
 
-`/sports`는 ESPN 축구 스코어보드 API(프리미어리그·라리가·분데스리가·K리그1)에서 오늘부터 14일간의 경기 일정·점수를 30초마다 조회합니다. 일부 리그만 조회에 성공하면 해당 경기와 조회 실패 안내를 함께 표시합니다. 실제 편성이 6개 미만이면 명시적으로 표시된 미리보기 카드로 채웁니다. 미리보기는 실제 생중계가 아니며 채팅을 열지 않습니다.
+수정 대상은 `glassbox71/ott-react`입니다. `glassbox71/wavve-test`의 공개 YouTube 라이브 검색·영상 검증·시청자 순위·Firestore 채팅 방식을 참고했습니다.
 
-## 공개 중계 자동 검색
+## 화면과 데이터
 
-스포츠 페이지는 기본으로 FIFA 공식 채널의 현재 라이브 플레이어(`https://www.youtube.com/embed/live_stream?channel=UCpcTrCXblq78GZrTUTLWeBw`)에 연결합니다. API 키 없이 요청할 수 있지만 현재 방송 여부·국가별 재생 가능 여부는 확인되지 않았습니다. 방송이 없거나 채널 임베드가 지원되지 않으면 YouTube에서 오류를 표시할 수 있습니다. 화면의 공식 채널 링크로 직접 확인하고 플레이어를 다시 연결할 수 있습니다. 이 채널 항목은 확인된 LIVE 경기 수에 포함하지 않습니다.
+- 기본: 공개 야구 라이브 전체 검색. 인기 TOP 5와 나머지 전체 목록을 표시합니다.
+- WBSC 공식: 실제 확인한 공식 채널 ID `UC-UXjExO348UiOCxazH69hA`로 제한합니다.
+- FIFA · 축구: 사용자의 요청에 따라 유지한 별도 축구 필터입니다. FIFA 방송을 야구로 표시하지 않습니다.
+- 예시 카드, 하이라이트, 채널 주소만 넣은 플레이어는 없습니다. 검색 결과가 적으면 실제 개수만 표시합니다.
 
-`VITE_YOUTUBE_API_KEY`로 YouTube Data API v3를 호출합니다. 기본은 축구·soccer·football match 공개 라이브 검색(최대 50개)입니다. FIFA 공식 필터는 공식 채널 ID를 확인해 해당 채널로 제한합니다. videos.list에서 공개 여부, 실제 방송 시작·종료, 임베드 허용을 확인하고 동시 시청자 수로 정렬합니다. TOP 5를 별도로 표시하며 적으면 실제 개수를 안내합니다. 제목에 명확한 게임·시뮬레이션·해설·관계없는 방송을 제외하지만 모든 영상의 경기 내용·중계 권한을 보증하지는 않습니다.
+YouTube `search.list`는 `eventType=live`, `type=video`, `videoEmbeddable=true`, `order=viewCount`와 야구/baseball 검색어를 사용합니다. 최대 50개 후보를 `videos.list`로 다시 조회해 공개·임베드 허용·실제 방송 시작·미종료·live 상태를 확인합니다. 제목으로 명확한 게임·시뮬레이션·해설·카드 개봉·소프트볼 등을 제외합니다. 메타데이터 필터만으로 모든 영상 내용과 방송 권한을 보증하지는 않습니다.
 
-5분 캐시와 자동 갱신을 사용하며 새로고침도 캐시를 따릅니다. 키는 브라우저에 공개되므로 HTTP referrer/API 사용 제한을 설정하세요. 많은 사용자가 접속하는 서비스에는 서버 캐시가 필요합니다. 환경 변수는 빌드 때 삽입되므로 배포 플랫폼에 설정하고 다시 빌드해야 합니다.
+동시 시청자 수 내림차순으로 정렬하며, 비공개 수치는 숫자를 만들어 넣지 않습니다. 5분 캐시와 자동 갱신을 사용합니다. 새로고침도 캐시를 사용하며 마지막 실제 조회 시간을 유지합니다. 조회 실패·키 누락·할당량 초과·성공했지만 결과 없음이 구분됩니다. 방송 종료·지역 제한은 YouTube 플레이어에서 발생할 수 있어 원본 링크를 함께 제공합니다.
 
-비교 저장소 wavve-test의 기존 YouTube 설정으로 실제 search.list와 videos.list 조회가 성공했습니다. FIFA 공식 채널에서 당시 검색된 공개 라이브는 0개였고, 다른 채널의 축구 방송은 확인됐습니다. 참고 저장소의 키는 로컬의 Git에서 제외된 .env.local에서만 재사용했고 값은 소스나 문서에 기록하지 않았습니다. 이 결과가 운영 사이트의 환경 변수 설정 또는 영상 재생을 보장하지는 않습니다.
+## 환경 변수와 실행
 
-GitHub 저장소의 홈페이지 링크는 https://ott-react-zeta.vercel.app 입니다. vercel.json은 Vite 빌드와 /sports의 SPA 경로 처리를 준비합니다. 배포 플랫폼 권한·환경 변수와 실제 배포 결과는 별도로 확인해야 합니다.
+`VITE_YOUTUBE_API_KEY`와 기존 `VITE_FIREBASE_*` 설정을 사용합니다. 값을 채팅·로그·소스에 기록하지 마세요. 브라우저 Vite 변수는 빌드 결과에 포함되므로 API 키의 HTTP referrer/API 사용 제한을 설정하고 서버 비밀 키를 넣지 마세요.
 
-## Firebase와 경기별 채팅
+```sh
+npm ci
+npm run dev -- --host 0.0.0.0 --port 5173 --strictPort
+npm run build
+npm run test:sports
+npx eslint src/pages/Sports.jsx src/features/sports/*.js src/features/sports/*.jsx
+```
 
-기존 Firebase VITE 환경 변수 6개를 설정하고 Google 로그인을 활성화하세요. 앱 도메인을 Firebase Auth 승인 도메인에 등록해야 합니다. 환경 변수는 기존 firebase/firebase.js에서 사용합니다. 설정이 없으면 스포츠 화면을 보여주고 채팅 연결 대기를 안내합니다.
+`.env.local`은 Git에서 제외됩니다. 비교 저장소의 기존 YouTube 클라이언트 설정은 로컬 검증에서만 재사용했습니다. 배포 환경 변수는 Vercel 프로젝트에서 별도로 확인하고 변경 후 다시 빌드해야 합니다. 다른 Firebase 프로젝트의 설정이나 사용자 데이터를 이 프로젝트에 복사하지 않습니다.
 
-Firestore의 `sportsBroadcasts/{gameId}`에 관리자가 중계를 등록할 수도 있습니다. 축구 ESPN 이벤트 ID에 `football-espn-` 접두사를 붙인 값을 문서 ID로 쓰면 해당 경기 일정과 합쳐집니다. 다른 경기에는 `football-`로 시작하는 고유한 ID를 사용하세요. sport가 football인 편성만 표시해 기존 야구 경기·채팅과 섞이지 않게 합니다.
+## Firebase 채팅
 
-필드: `sport`(반드시 `football`), `home`(문자열), `away`(문자열), `venue`(문자열), `startsAt`(ISO 문자열), `live`(불리언), `status`(문자열), `streamUrl`(문자열). 선택적으로 `homeScore`, `awayScore`, `title`을 입력할 수 있습니다. 종료 시 live를 false로 변경하세요. 허용 URL은 HTTPS YouTube `/embed/VIDEO_ID` 및 직접 재생 가능한 HTTPS mp4/webm입니다. 방송 제공처가 허용하는 영상만 등록하세요.
+기존 Firebase Google 로그인을 사용합니다. `sportsRooms/{sport}-youtube-{videoId}/messages`에 메시지를 저장하고 최근 100개를 `onSnapshot`으로 구독합니다. 서버 동기화가 확인된 경우에만 전송을 활성화합니다. 방송 선택 변경 시 구독을 해제하므로 다른 방송의 채팅이 섞이지 않습니다.
 
-채팅은 `sportsRooms/{gameId}/messages`에 저장하고 최근 100개를 구독합니다. 로그인한 사용자는 `presence` 하위 컬렉션에 탭별 하트비트를 30초마다 기록합니다. 90초 안에 접속한 고유 uid 수를 표시합니다(최근 500개 접속 세션 기준, 익명 시청자 제외). 오래된 presence 문서는 서버의 정리 작업이 필요합니다. 실제 서비스의 스팸 방지·관리자 삭제·보관 정책은 서버에서 추가하세요.
+`presence` 하위 컬렉션은 탭별 30초 하트비트와 90초 유효 기간을 사용합니다. 최근 500개 세션의 고유 로그인 사용자 수이며 익명 시청자 수와는 다릅니다. 종료·충돌로 남은 오래된 세션은 운영 서버에서 정리해야 합니다.
 
-`docs/sports-firestore.rules`의 match 블록을 기존 프로젝트 보안 규칙에 병합하세요. 기존 사용자 데이터 규칙을 대체하지 마세요. 넓은 기존 allow 규칙이 있으면 이 제약도 무력화되므로 검토해야 합니다. 배포 권한/프로젝트 설정이 없어 이 작업에서는 규칙을 배포하지 않았습니다.
+`docs/sports-firestore.rules`의 match 블록을 기존 Firebase 보안 규칙 안에 병합하세요. 기존 규칙을 통째로 교체하지 마세요. 인증 UID·필드·메시지 길이·서버 시간·presence 소유자를 검증하며 클라이언트의 메시지 수정·삭제를 금지합니다. 기존의 넓은 allow 규칙은 이 제약을 무력화할 수 있으므로 함께 검토해야 합니다.
 
-## 검증
+## 두 사용자 통합 테스트
 
-`node --test tests/sports.test.mjs`, `npm run build`, `npx eslint src/pages/Sports.jsx src/features/sports/*.js src/features/sports/*.jsx src/firebase/firebase.js`.
-설정 이후 두 개의 로그인된 브라우저로 같은 실제 경기를 선택해 메시지 송수신·접속자 표시·경기 전환 격리를 확인하세요. 다른 경기를 선택했을 때 해당 경기 메시지만 보여야 합니다. API 키/프로젝트 설정 없는 실행에서는 이 다중 사용자 검증을 수행할 수 없습니다.
+Java 21 이상과 Firestore 에뮬레이터가 필요합니다. 에뮬레이터는 실제 운영 Firebase 설정이나 로그인 비밀번호를 사용하지 않습니다.
 
-## 학생용 재사용 프롬프트
+```sh
+npx firebase-tools@15.34.0 emulators:start --only firestore --project demo-ott-sports --config firebase.emulators.json
+# 별도 터미널
+FIRESTORE_EMULATOR_HOST=127.0.0.1:18080 npm run test:sports:chat
+```
 
-[스포츠 페이지 제작 프롬프트](sports-prompt.md)를 참고하세요.
+테스트는 문서의 실제 보안 규칙을 로드해 서로 다른 인증 UID 두 개의 실시간 메시지 송수신, 방송별 격리, 미인증 읽기 거부, 발신 UID 위조·긴 메시지·수정·삭제 거부, presence 소유자를 확인합니다. `FIRESTORE_EMULATOR_HOST`가 없으면 이 테스트는 명시적으로 SKIP 처리합니다. SKIP을 통과로 보고하면 안 됩니다.
+
+GitHub Actions의 `.github/workflows/sports-check.yml`도 같은 통합 테스트를 실행합니다. 테스트 환경은 `demo-ott-sports`이며 운영 데이터나 비밀번호를 사용하지 않습니다. 워크플로 파일 저장·푸시와 CI 실행 성공은 별개이므로 실제 결과를 확인하세요.
+
+이 환경에서는 공식 `storage.googleapis.com` 에뮬레이터 다운로드가 프록시의 403 응답으로 막혔습니다. 따라서 통합 테스트와 운영 두 사용자 채팅은 아직 검증하지 못했습니다. 패키지·TLS·체크섬 검증을 끄거나 출처 불명 JAR로 대체하지 않았습니다.
+
+## 배포
+
+저장소에 등록된 기존 배포 주소는 https://ott-react-zeta.vercel.app 입니다. `vercel.json`은 Vite 빌드와 `/sports` 직접 접근의 SPA 처리를 설정합니다. GitHub main 반영과 Vercel 배포 성공은 별개입니다. 연결된 Vercel 프로젝트의 빌드 환경 변수·실제 배포 결과를 확인한 뒤 운영 `/sports`에서 재생·로그인·채팅을 검증해야 합니다.
+
+## 학생용 프롬프트
+
+[재사용 프롬프트](sports-prompt.md)를 참고하세요. 요구사항만 복사해도 결과가 자동으로 같아지는 것은 아닙니다. 기존 코드·환경 변수·접근 권한·실제 검증 결과를 함께 확인해야 합니다.
+
+## 이번 인스턴스 검증 범위
+
+실제 YouTube API 메타데이터로 야구 목록과 TOP 5를 확인했습니다. 브라우저 API 통합 테스트는 호스트의 정상 TLS 신뢰 설정을 사용하는 테스트용 네트워크 전달기를 사용했고, 목록·필터·선택·모바일 화면을 검증했습니다. 이것은 실제 영상 재생 검증과 별개입니다. 실제 YouTube privacy 플레이어 HTTP 응답은 200이었으나, 브라우저에서는 i.ytimg.com 프록시 차단과 인증서 오류가 발생해 영상 재생 성공을 확인하지 못했습니다. TLS 검증은 끄지 않았습니다.

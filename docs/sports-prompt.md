@@ -8,7 +8,7 @@
 수정 대상: glassbox71/ott-react
 비교 대상: glassbox71/wavve-test의 src/api/sports.ts, src/pages/Sports.tsx,
           src/components/SportsChat.tsx, docs/sports.md
-종목: 축구 (야구로 만들 때는 이 줄과 검색어를 야구/baseball로 바꾸세요)
+종목: 야구 (기본 검색어: 야구/baseball)
 배포 대상: 이 저장소에 연결된 기존 배포 프로젝트
 
 1. 먼저 저장소의 AGENTS.md, 라우터, 헤더, 인증, Firebase 설정,
@@ -20,10 +20,10 @@
 
 3. 실제 데이터 소스를 조사하고 확인한 출처를 설명하세요.
    YouTube Data API v3 search.list에서 type=video, eventType=live,
-   videoEmbeddable=true, 축구/soccer 검색어, order=viewCount로 검색한 뒤
+   videoEmbeddable=true, 야구/baseball 검색어, order=viewCount로 검색한 뒤
    videos.list에서 공개 여부, 외부 재생 허용, 실제 방송 시작 여부,
    종료 여부를 다시 확인하세요. 동시 시청자 수 내림차순 TOP 5와
-   전체 라이브 목록을 보여 주세요. FIFA 공식 채널만 보는 필터도 만드세요.
+   전체 라이브 목록을 보여 주세요. WBSC 공식 야구 필터와 별도의 FIFA 공식 축구 필터를 만드세요. FIFA는 야구 기관이 아니므로 축구 필터임을 표시하세요.
    제목에 명확한 게임·시뮬레이션·해설·관계없는 콘텐츠는 제외하되,
    검색 메타데이터만으로 모든 영상의 경기 내용·중계 권한을 보증하지 마세요.
 
@@ -69,5 +69,5 @@
 
 - `wavve-test`는 YouTube의 공개 야구 라이브 전체 검색과 동시 시청자 수 순위를 사용합니다. FIFA 한 채널에 제한하지 않습니다.
 - 이전 `ott-react` 구현은 FIFA 한 채널과 미리보기 위주였고, 공개 라이브 전체 검색과 TOP 5가 빠져 있었습니다.
-- 비교 저장소의 기존 YouTube 설정으로 실제 API 조회가 가능함을 확인했습니다. FIFA 검색 결과가 비어 있는 것과 전체 축구 라이브가 없는 것은 다릅니다.
+- 비교 저장소의 기존 YouTube 설정으로 실제 API 조회가 가능함을 확인했습니다. FIFA 검색 결과가 비어 있는 것과 야구 라이브가 없는 것은 다릅니다. 현재 구현은 야구 전체·WBSC 야구·FIFA 축구를 구분합니다.
 - 참고 저장소의 키 값을 새 저장소에 커밋하지 않았습니다. 배포 프로젝트의 환경 변수는 프로젝트마다 별도로 확인해야 합니다.

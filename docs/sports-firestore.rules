@@ -1,9 +1,5 @@
 // Merge these match blocks inside your existing service cloud.firestore /
 // match /databases/{database}/documents block. Do not replace existing rules.
-match /sportsBroadcasts/{gameId} {
-  allow read: if true;
-  allow write: if false; // Publish broadcasts through an authorized Admin SDK.
-}
 match /sportsRooms/{gameId}/messages/{messageId} {
   allow read: if request.auth != null;
   allow create: if request.auth != null

@@ -18,9 +18,10 @@ export function LiveChat({ game }) {
   useEffect(() => {
     if (!db || !user || game.preview) return;
     const room = ['sportsRooms', game.id];
-    const unsubscribe = onSnapshot(query(collection(db, ...room, 'messages'), orderBy('createdAt', 'desc'), limit(100)), snapshot => {
+    const unsubscribe = onSnapshot(query(collection(db, ...room, 'messages'), orderBy('createdAt', 'desc'), limit(100)), { includeMetadataChanges: true }, snapshot => {
       setMessages(snapshot.docs.map(item => ({ id: item.id, ...item.data() })).reverse());
-      setConnected(true);
+      setConnected(!snapshot.metadata.fromCache);
+      setError('');
     }, () => { setError('채팅에 연결하지 못했습니다. Firebase 권한과 네트워크를 확인해 주세요.'); setConnected(false); });
     // A per-tab presence entry expires after 90 seconds, including closed/crashed tabs.
     const presence = doc(collection(db, ...room, 'presence'));
@@ -54,7 +55,7 @@ export function LiveChat({ game }) {
     setSending(true); setError(''); lastSent.current = Date.now();
     try {
       await addDoc(collection(db, 'sportsRooms', game.id, 'messages'), {
-        uid: user.uid, name: (user.displayName || '축구 팬').slice(0, 30), text: body.slice(0, 300), createdAt: serverTimestamp(),
+        uid: user.uid, name: (user.displayName || '야구 팬').slice(0, 30), text: body.slice(0, 300), createdAt: serverTimestamp(),
       });
       setText('');
     } catch { setError('메시지를 보내지 못했습니다. 다시 시도해 주세요.'); }
@@ -68,7 +69,7 @@ export function LiveChat({ game }) {
       {!db ? <p className="sports-empty">Firebase 연결 설정 후 실시간 채팅을 이용할 수 있습니다.</p>
         : game.preview ? <p className="sports-empty">미리보기 경기입니다. 실제 경기를 선택하면 응원방이 열립니다.</p>
         : !user ? <p className="sports-empty"><Link to="/login">로그인</Link>하고 함께 응원해 보세요.</p>
-        : !messages.length ? <p className="sports-empty">첫 번째 응원을 남겨 보세요 ⚽</p> : null}
+        : !messages.length ? <p className="sports-empty">첫 번째 응원을 남겨 보세요 ⚾</p> : null}
       {user && messages.map(message => <div key={message.id} className={`sports-message ${message.uid === user?.uid ? 'is-mine' : ''}`}>
         <span className="sports-avatar">{message.name?.slice(0, 1) || '팬'}</span><div><strong>{message.name}</strong><p>{message.text}</p></div>
       </div>)}<div ref={bottom} />

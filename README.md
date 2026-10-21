@@ -21,7 +21,7 @@ If you are developing a production application, we recommend using TypeScript wi
 
 ## 스포츠 페이지
 
-축구 공개 라이브 검색, 동시 시청자 기준 TOP 5, FIFA 공식 필터와 경기별 채팅을 제공합니다.
+야구 공개 라이브 검색, 동시 시청자 기준 TOP 5, WBSC 공식 야구·FIFA 공식 축구 필터와 방송별 채팅을 제공합니다.
 
 - [설정·실행·검증 안내](docs/sports-setup.md)
 - [학생용 재사용 프롬프트](docs/sports-prompt.md)
