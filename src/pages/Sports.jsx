@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, limit, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
-import { discoverBroadcasts } from '../features/sports/broadcasts';
+import { discoverBroadcasts, fifaChannel } from '../features/sports/broadcasts';
 import { LiveChat } from '../features/sports/LiveChat';
 import { fetchFootballSchedule, playerSource, previewGames } from '../features/sports/games';
 import './Sports.css';
@@ -11,6 +11,8 @@ export function Sports() {
   const [broadcasts, setBroadcasts] = useState([]);
   const [publicStreams, setPublicStreams] = useState([]);
   const [streamError, setStreamError] = useState('');
+  const [streamStatus, setStreamStatus] = useState(import.meta.env.VITE_YOUTUBE_API_KEY ? 'loading' : 'unavailable');
+  const [playerRevision, setPlayerRevision] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
   const [filter, setFilter] = useState('all');
   const [feed, setFeed] = useState({ loading: true, error: '', updated: null });
@@ -48,9 +50,12 @@ export function Sports() {
     async function refresh() {
       try {
         const streams = await discoverBroadcasts(apiKey, controller.signal);
-        if (active) { setPublicStreams(streams); setStreamError(''); }
+        if (active) { setPublicStreams(streams); setStreamError(''); setStreamStatus('ready'); }
       } catch (error) {
-        if (active && error.name !== 'AbortError') setStreamError('공식 라이브 검색에 실패했습니다. YouTube API 설정을 확인해 주세요.');
+        if (active && error.name !== 'AbortError') {
+          setPublicStreams([]); setStreamStatus('error');
+          setStreamError('FIFA 라이브 조회에 실패했습니다. 현재 방송 여부를 확인하지 못했습니다.');
+        }
       }
     }
     refresh();
@@ -61,35 +66,37 @@ export function Sports() {
   const merged = new Map(schedule.map(game => [game.id, game]));
   [...publicStreams, ...broadcasts].forEach(game => merged.set(game.id, { ...merged.get(game.id), ...game }));
   const actualGames = [...merged.values()].sort((a, b) => Number(Boolean(b.live)) - Number(Boolean(a.live)) || String(a.startsAt || '').localeCompare(String(b.startsAt || '')));
-  const games = [...actualGames, ...previewGames.slice(0, Math.max(0, 6 - actualGames.length))];
-  const selected = games.find(game => game.id === selectedId) || games[0];
+  const games = [...actualGames, fifaChannel, ...previewGames.slice(0, Math.max(0, 6 - actualGames.length))];
+  const selected = games.find(game => game.id === selectedId) || publicStreams[0] || fifaChannel;
   const visible = filter === 'live' ? games.filter(game => game.live && !game.preview) : games;
   const source = playerSource(selected?.streamUrl);
   const liveCount = actualGames.filter(game => game.live).length;
+  const liveLookupIncomplete = Boolean(feed.loading || feed.error || streamStatus !== 'ready');
   return <main className="sports-page">
     <div className="sports-shell">
       <div className="sports-title-row"><div><p className="sports-eyebrow">PLAY TOGETHER · SPORTS</p><h1>축구의 모든 순간, 함께.</h1><p className="sports-subtitle">경기를 보고, 응원하고, 축구 팬들과 실시간으로 이야기하세요.</p></div><span className="sports-season">⚽ FOOTBALL LOUNGE</span></div>
       <div className="sports-watch-layout">
         <section className="sports-watch" aria-label="선택한 경기 중계">
           <div className="sports-player">
-            {source?.type === 'iframe' ? <iframe key={source.url} src={source.url} title={`${selected.away} 대 ${selected.home} 중계`} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+            {source?.type === 'iframe' ? <iframe key={`${source.url}-${playerRevision}`} src={source.url} title={selected.title || `${selected.away} 대 ${selected.home} 중계`} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
               : source?.type === 'video' ? <video key={source.url} src={source.url} controls playsInline onError={event => { event.currentTarget.nextElementSibling.hidden = false; }}><track kind="captions" /></video> : null}
             {source?.type === 'video' && <p className="sports-playback-error" role="alert" hidden>영상을 재생할 수 없습니다. 중계 제공처의 주소와 재생 권한을 확인해 주세요.</p>}
             {!source && <div className="sports-player-placeholder"><div className="sports-field"><span>⚽</span></div><span className="sports-outline-badge">{selected?.preview ? '경기 화면 미리보기' : '중계 연결 대기'}</span><h2>{selected?.away} <span>vs</span> {selected?.home}</h2><p>{selected?.preview ? '예시 편성입니다. 실제 진행 중인 경기가 아닙니다.' : '이 경기의 공식 중계가 아직 등록되지 않았습니다.'}</p><p className="sports-player-note">중계가 연결되면 이곳에서 시청하며 함께 응원할 수 있어요.</p></div>}
           </div>
-          <div className="sports-watch-info"><div><span className={`sports-badge ${selected?.live ? 'is-live' : ''}`}>{selected?.preview ? 'PREVIEW' : selected?.live ? '● LIVE' : selected?.status || '예정'}</span><h2>{selected?.title || <>{selected?.away} <span>VS</span> {selected?.home}</>}</h2><p>{selected?.venue || '경기장 미정'} {selected?.startsAt ? `· ${new Date(selected.startsAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })} (한국 시간)` : ''}</p></div><div className="sports-score" aria-label="원정팀 대 홈팀 점수">{selected?.awayScore ?? '–'} <span>:</span> {selected?.homeScore ?? '–'}</div></div>
+          {selected.channel && <div className="sports-channel-notice"><strong>FIFA 공식 채널의 현재 라이브 재생을 시도합니다.</strong><p>방송 여부는 아직 확인되지 않았습니다. 영상이 나오지 않으면 공식 채널에서 방송 일정·시청 가능 지역을 확인해 주세요.</p><div><button onClick={() => setPlayerRevision(value => value + 1)}>플레이어 다시 연결</button><a href={selected.watchUrl} target="_blank" rel="noreferrer">FIFA 공식 채널에서 확인 ↗</a></div></div>}
+          <div className="sports-watch-info"><div><span className={`sports-badge ${selected?.live ? 'is-live' : ''}`}>{selected?.preview ? 'PREVIEW' : selected?.live ? '● LIVE' : selected?.status || '예정'}</span><h2>{selected?.title || <>{selected?.away} <span>VS</span> {selected?.home}</>}</h2><p>{selected?.venue || '경기장 미정'} {selected?.startsAt ? `· ${new Date(selected.startsAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })} (한국 시간)` : ''}</p></div><div className="sports-score" aria-label="원정팀 대 홈팀 점수">{!selected.channel && <>{selected?.awayScore ?? '–'} <span>:</span> {selected?.homeScore ?? '–'}</>}</div></div>
         </section>
         {selected && <LiveChat key={selected.id} game={selected} />}
       </div>
       <section className="sports-schedule" aria-labelledby="sports-schedule-title">
-        <div className="sports-section-heading"><div><h2 id="sports-schedule-title">경기 둘러보기</h2><p>좋아하는 경기를 선택하고 응원방에 입장하세요.</p></div><div className="sports-tabs" aria-label="경기 필터"><button onClick={() => setFilter('all')} aria-pressed={filter === 'all'}>전체 경기</button><button onClick={() => setFilter('live')} aria-pressed={filter === 'live'}>실시간 <span>{liveCount}</span></button></div></div>
-        <div className="sports-feed-status" role="status">{feed.loading ? '공식 경기 일정을 불러오는 중…' : feed.error || `ESPN 축구 일정 · ${feed.updated?.toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul' })} 갱신 · 30초마다 업데이트`}{broadcastError && <p>{broadcastError}</p>}{streamError && <p>{streamError}</p>}{!import.meta.env.VITE_YOUTUBE_API_KEY && <p>공식 채널 라이브 자동 검색은 YouTube API 연결 후 제공됩니다.</p>}{!db && <p>중계·채팅 서비스 연결을 위한 Firebase 설정이 필요합니다.</p>}</div>
+        <div className="sports-section-heading"><div><h2 id="sports-schedule-title">경기 둘러보기</h2><p>좋아하는 경기를 선택하고 응원방에 입장하세요.</p></div><div className="sports-tabs" aria-label="경기 필터"><button onClick={() => setFilter('all')} aria-pressed={filter === 'all'}>전체 경기</button><button onClick={() => setFilter('live')} aria-pressed={filter === 'live'}>실시간 <span>{liveCount ? `${liveCount}${liveLookupIncomplete ? '+' : ''}` : liveLookupIncomplete ? '조회 미완료' : 0}</span></button></div></div>
+        <div className="sports-feed-status" role="status">{feed.loading ? '공식 경기 일정을 불러오는 중…' : feed.error || `ESPN 축구 일정 · ${feed.updated?.toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul' })} 갱신 · 30초마다 업데이트`}{broadcastError && <p>{broadcastError}</p>}{streamError && <p>{streamError}</p>}{streamStatus === 'loading' && <p>FIFA 공식 생중계를 확인하고 있습니다.</p>}{streamStatus === 'unavailable' && <p>FIFA 방송 여부 미확인 · 영상별 검색은 연결되지 않았으며, 공식 채널 플레이어로 직접 확인할 수 있습니다.</p>}{streamStatus === 'ready' && !publicStreams.length && <p>이번 조회에서 FIFA 공식 채널의 공개·임베드 가능한 라이브 영상을 찾지 못했습니다.</p>}{!db && <p>중계·채팅 서비스 연결을 위한 Firebase 설정이 필요합니다.</p>}</div>
         <div className="sports-game-grid">{visible.map((game, index) => <button key={game.id} className={`sports-game-card ${selected?.id === game.id ? 'is-selected' : ''}`} onClick={() => setSelectedId(game.id)} aria-pressed={selected?.id === game.id}>
-          <div className="sports-card-top"><span className={`sports-badge ${game.live ? 'is-live' : ''}`}>{game.preview ? '예시 경기' : game.live ? '● LIVE' : game.status || '예정'}</span><span>{game.preview ? '미리보기' : game.league || 'FOOTBALL'}</span></div>
-          <div className={`sports-matchup theme-${index % 3}`}><div><span className="sports-team-icon">{game.away.slice(0, 2)}</span><strong>{game.away}</strong></div><span className="sports-card-vs">{game.awayScore !== undefined ? `${game.awayScore} : ${game.homeScore ?? 0}` : 'VS'}</span><div><span className="sports-team-icon">{game.home.slice(0, 2)}</span><strong>{game.home}</strong></div></div>
-          {game.title && <p className="sports-broadcast-title">{game.title}</p>}<div className="sports-card-bottom"><span>{game.venue || '경기장 미정'}</span><span>{selected?.id === game.id ? '선택한 경기 ✓' : '시청 · 응원하기 →'}</span></div>
+          <div className="sports-card-top"><span className={`sports-badge ${game.live ? 'is-live' : ''}`}>{game.preview ? '예시 경기' : game.live ? '● LIVE' : game.status || '예정'}</span><span>{game.channel ? 'FIFA 공식 채널' : game.preview ? '미리보기' : game.league || 'FOOTBALL'}</span></div>
+          {game.channel ? <div className="sports-fifa-card"><span>⚽</span><strong>FIFA 공식 라이브</strong><p>공식 채널에서 현재 방송 확인</p></div> : <div className={`sports-matchup theme-${index % 3}`}><div><span className="sports-team-icon">{game.away.slice(0, 2)}</span><strong>{game.away}</strong></div><span className="sports-card-vs">{game.awayScore !== undefined ? `${game.awayScore} : ${game.homeScore ?? 0}` : 'VS'}</span><div><span className="sports-team-icon">{game.home.slice(0, 2)}</span><strong>{game.home}</strong></div></div>}
+          {game.title && <p className="sports-broadcast-title">{game.title}</p>}<div className="sports-card-bottom"><span>{game.venue || '경기장 미정'}</span><span>{selected?.id === game.id ? '선택됨 ✓' : game.channel ? '공식 라이브 확인 →' : '시청 · 응원하기 →'}</span></div>
         </button>)}</div>
-        {!visible.length && <p className="sports-no-games">현재 확인된 실시간 경기가 없습니다. 전체 경기에서 예정 경기를 확인해 주세요.</p>}
+        {!visible.length && <p className="sports-no-games">{liveLookupIncomplete ? '경기 조회가 완료되지 않아 실시간 경기 유무를 확인할 수 없습니다.' : '조회된 일정에 진행 중인 경기가 없습니다.'} FIFA 방송은 상단 공식 채널 플레이어에서 확인할 수 있습니다.</p>}
         <div className="sports-official-links"><a href="https://www.plus.fifa.com/" target="_blank" rel="noreferrer">FIFA+ 공식 중계 안내 ↗</a><a href="https://www.youtube.com/@FIFA/streams" target="_blank" rel="noreferrer">FIFA 공식 중계 채널 ↗</a></div><p className="sports-disclaimer">예시 경기는 화면 미리보기용입니다. 실제 경기 일정·점수는 ESPN 축구 데이터 및 등록된 편성을 표시하며, 영상은 제공처의 중계 권한과 서비스 상태에 따라 재생됩니다.</p>
       </section>
     </div>

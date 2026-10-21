@@ -4,3 +4,7 @@
 
 /* Football pitch emblem */
 .sports-field{transform:none;border-radius:12px;background:linear-gradient(90deg,transparent 49%,#75a04e55 49%,#75a04e55 51%,transparent 51%),#89c5560c}.sports-field span{transform:none}
+
+.sports-channel-notice{padding:16px 22px;background:#1b2a22;border-bottom:1px solid #344637;font-size:12px;line-height:1.8;color:#b3c5b7}.sports-channel-notice strong{color:#d9efcd}.sports-channel-notice>div{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}.sports-channel-notice a,.sports-channel-notice button{color:#b1e67d;text-decoration:underline;cursor:pointer}.sports-channel-notice + .sports-watch-info{padding-top:16px}
+
+.sports-fifa-card{padding:18px;text-align:center;background:radial-gradient(ellipse at bottom,#24403688,transparent)}.sports-fifa-card>span{display:block;font-size:35px;margin-bottom:10px}.sports-fifa-card strong{display:block;color:#d9efcd}.sports-fifa-card p{font-size:12px;color:#93ad9a;margin-top:6px}
