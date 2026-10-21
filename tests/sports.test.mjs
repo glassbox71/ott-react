@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { previewGames, normalizeGame, playerSource, fetchFootballSchedule, footballLeagues } from '../src/features/sports/games.js';
-import { discoverBroadcasts, FIFA_CHANNEL_ID, fifaChannel, verifiedFifaBroadcasts } from '../src/features/sports/broadcasts.js';
+import { discoverBroadcasts, FIFA_CHANNEL_ID, fifaChannel, verifiedFifaBroadcasts, verifiedBroadcasts } from '../src/features/sports/broadcasts.js';
 
 test('at least five fallback cards are explicitly previews', () => {
   assert.ok(previewGames.length >= 5);
@@ -53,7 +53,7 @@ test('missing football feed fails rather than inventing live matches', async () 
   finally { globalThis.fetch = original; }
 });
 test('missing API key does not fabricate broadcasts', async () => {
-  assert.deepEqual(await discoverBroadcasts(), []);
+  await assert.rejects(discoverBroadcasts());
 });
 test('discovery resolves official channels then requests embeddable live videos', async () => {
   const original = globalThis.fetch;
@@ -66,7 +66,7 @@ test('discovery resolves official channels then requests embeddable live videos'
       : { items: [fifaVideo()] } };
   };
   try {
-    const games = await discoverBroadcasts('test-key');
+    const games = await discoverBroadcasts('fifa-discovery-test', undefined, 'fifa');
     assert.equal(games.length, 1);
     assert.ok(games.every(game => game.sport === 'football' && game.id.startsWith('football-')));
     assert.deepEqual(calls.filter(url => url.pathname.endsWith('channels')).map(url => url.searchParams.get('forHandle')), ['@FIFA']);
@@ -77,7 +77,7 @@ test('discovery resolves official channels then requests embeddable live videos'
 test('unavailable discovery surfaces an error instead of fake live streams', async () => {
   const original = globalThis.fetch;
   globalThis.fetch = async () => ({ ok: false });
-  try { await assert.rejects(discoverBroadcasts('test-key')); }
+  try { await assert.rejects(discoverBroadcasts('unavailable-test')); }
   finally { globalThis.fetch = original; }
 });
 
@@ -111,6 +111,37 @@ test('FIFA verification excludes ended, upcoming, private, non-embeddable and un
 test('a failed FIFA channel lookup is not treated as no live broadcasts', async () => {
   const original = globalThis.fetch;
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ items: [{ id: 'unrelated-channel' }] }) });
-  try { await assert.rejects(discoverBroadcasts('test-key')); }
+  try { await assert.rejects(discoverBroadcasts('wrong-channel-test', undefined, 'fifa')); }
   finally { globalThis.fetch = original; }
+});
+
+test('public football lives are sorted by concurrent viewers, with obvious nonmatches excluded', () => {
+  const videos = [
+    fifaVideo({ id: 'less', snippet: { channelId: 'college', channelTitle: 'College Athletics', liveBroadcastContent: 'live', title: "Men's Soccer vs Other College" }, liveStreamingDetails: { actualStartTime: '2026-10-21T12:00:00Z', concurrentViewers: '12' } }),
+    fifaVideo({ id: 'more', liveStreamingDetails: { actualStartTime: '2026-10-21T12:00:00Z', concurrentViewers: '200' } }),
+    fifaVideo({ id: 'simulation', snippet: { channelId: 'game', liveBroadcastContent: 'live', title: 'Football simulation gameplay' } }),
+    fifaVideo({ id: 'talk', snippet: { channelId: 'talk', liveBroadcastContent: 'live', title: 'Live watchalong commentary' } }),
+  ];
+  const result = verifiedBroadcasts(videos);
+  assert.deepEqual(result.map(video => video.id), ['football-youtube-more', 'football-youtube-less']);
+  assert.equal(result[0].viewers, 200);
+});
+test('football search is broad, ranks by viewers and caches within five minutes', async () => {
+  const original = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async input => {
+    const url = new URL(input); calls.push(url);
+    return { ok: true, json: async () => url.pathname.endsWith('search')
+      ? { items: [{ id: { videoId: 'live-video' } }] }
+      : { items: [fifaVideo()] } };
+  };
+  try {
+    const first = await discoverBroadcasts('football-cache-test');
+    const second = await discoverBroadcasts('football-cache-test');
+    assert.deepEqual(first, second); assert.equal(calls.length, 2);
+    assert.ok(calls[0].searchParams.get('q').includes('soccer'));
+    assert.equal(calls[0].searchParams.get('channelId'), null);
+    assert.equal(calls[0].searchParams.get('order'), 'viewCount');
+    assert.equal(calls[0].searchParams.get('eventType'), 'live');
+  } finally { globalThis.fetch = original; }
 });

@@ -6,9 +6,13 @@
 
 스포츠 페이지는 기본으로 FIFA 공식 채널의 현재 라이브 플레이어(`https://www.youtube.com/embed/live_stream?channel=UCpcTrCXblq78GZrTUTLWeBw`)에 연결합니다. API 키 없이 요청할 수 있지만 현재 방송 여부·국가별 재생 가능 여부는 확인되지 않았습니다. 방송이 없거나 채널 임베드가 지원되지 않으면 YouTube에서 오류를 표시할 수 있습니다. 화면의 공식 채널 링크로 직접 확인하고 플레이어를 다시 연결할 수 있습니다. 이 채널 항목은 확인된 LIVE 경기 수에 포함하지 않습니다.
 
-`VITE_YOUTUBE_API_KEY`가 있으면 FIFA 공식 채널을 확인한 뒤 라이브 영상을 검색하고 `videos` API로 공개 여부·임베드 허용·실제 방송 시작·종료 여부를 추가 검증합니다. 검증된 영상이 있으면 해당 영상을 기본 선택합니다. 15분마다 재검색하며 검색 실패 시 지난 영상을 LIVE로 계속 표시하지 않습니다. 공식 채널도 경기 외 라이브를 송출할 수 있으므로 제목을 확인하세요. 키는 브라우저에 공개되므로 HTTP 리퍼러/API 사용 제한을 설정하세요. 조회 미완료와 성공한 조회에서 결과가 없는 경우를 구분해 표시합니다.
+`VITE_YOUTUBE_API_KEY`로 YouTube Data API v3를 호출합니다. 기본은 축구·soccer·football match 공개 라이브 검색(최대 50개)입니다. FIFA 공식 필터는 공식 채널 ID를 확인해 해당 채널로 제한합니다. videos.list에서 공개 여부, 실제 방송 시작·종료, 임베드 허용을 확인하고 동시 시청자 수로 정렬합니다. TOP 5를 별도로 표시하며 적으면 실제 개수를 안내합니다. 제목에 명확한 게임·시뮬레이션·해설·관계없는 방송을 제외하지만 모든 영상의 경기 내용·중계 권한을 보증하지는 않습니다.
 
-현재 환경에서는 공식 사이트가 네트워크 프록시에서 403 응답을 반환하고 API 키도 없어, 실제 중계 주소를 발견하거나 재생하지 못했습니다. 네트워크 설정 초안에 site.api.espn.com, www.youtube-nocookie.com, www.plus.fifa.com을 기존 목록에 추가했습니다. 초안 저장은 실행 환경에 즉시 적용되지 않습니다.
+5분 캐시와 자동 갱신을 사용하며 새로고침도 캐시를 따릅니다. 키는 브라우저에 공개되므로 HTTP referrer/API 사용 제한을 설정하세요. 많은 사용자가 접속하는 서비스에는 서버 캐시가 필요합니다. 환경 변수는 빌드 때 삽입되므로 배포 플랫폼에 설정하고 다시 빌드해야 합니다.
+
+비교 저장소 wavve-test의 기존 YouTube 설정으로 실제 search.list와 videos.list 조회가 성공했습니다. FIFA 공식 채널에서 당시 검색된 공개 라이브는 0개였고, 다른 채널의 축구 방송은 확인됐습니다. 참고 저장소의 키는 로컬의 Git에서 제외된 .env.local에서만 재사용했고 값은 소스나 문서에 기록하지 않았습니다. 이 결과가 운영 사이트의 환경 변수 설정 또는 영상 재생을 보장하지는 않습니다.
+
+GitHub 저장소의 홈페이지 링크는 https://ott-react-zeta.vercel.app 입니다. vercel.json은 Vite 빌드와 /sports의 SPA 경로 처리를 준비합니다. 배포 플랫폼 권한·환경 변수와 실제 배포 결과는 별도로 확인해야 합니다.
 
 ## Firebase와 경기별 채팅
 
@@ -26,3 +30,7 @@ Firestore의 `sportsBroadcasts/{gameId}`에 관리자가 중계를 등록할 수
 
 `node --test tests/sports.test.mjs`, `npm run build`, `npx eslint src/pages/Sports.jsx src/features/sports/*.js src/features/sports/*.jsx src/firebase/firebase.js`.
 설정 이후 두 개의 로그인된 브라우저로 같은 실제 경기를 선택해 메시지 송수신·접속자 표시·경기 전환 격리를 확인하세요. 다른 경기를 선택했을 때 해당 경기 메시지만 보여야 합니다. API 키/프로젝트 설정 없는 실행에서는 이 다중 사용자 검증을 수행할 수 없습니다.
+
+## 학생용 재사용 프롬프트
+
+[스포츠 페이지 제작 프롬프트](sports-prompt.md)를 참고하세요.
