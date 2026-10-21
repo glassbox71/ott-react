@@ -49,7 +49,7 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:18080 npm run test:sports:chat
 
 GitHub Actions의 `.github/workflows/sports-check.yml`도 같은 통합 테스트를 실행합니다. 테스트 환경은 `demo-ott-sports`이며 운영 데이터나 비밀번호를 사용하지 않습니다. 워크플로 파일 저장·푸시와 CI 실행 성공은 별개이므로 실제 결과를 확인하세요.
 
-이 환경에서는 공식 `storage.googleapis.com` 에뮬레이터 다운로드가 프록시의 403 응답으로 막혔습니다. 따라서 통합 테스트와 운영 두 사용자 채팅은 아직 검증하지 못했습니다. 패키지·TLS·체크섬 검증을 끄거나 출처 불명 JAR로 대체하지 않았습니다.
+이 환경에서는 공식 `storage.googleapis.com` 에뮬레이터 다운로드가 프록시의 403 응답으로 막혔습니다. 로컬 통합 테스트는 SKIP 상태였습니다. 이후 [GitHub Actions 실행 #1](https://github.com/glassbox71/ott-react/actions/runs/39543184163)의 Two-user Firestore integration and rules 단계가 성공해, 에뮬레이터에서 두 인증 사용자의 실시간 송수신·방송별 격리·보안 규칙을 검증했습니다. 운영 Firebase 프로젝트의 로그인·채팅은 여전히 별도 검증이 필요합니다. 패키지·TLS·체크섬 검증을 끄거나 출처 불명 JAR로 대체하지 않았습니다.
 
 ## 배포
 
