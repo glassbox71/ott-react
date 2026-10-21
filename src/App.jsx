@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { useAuthStore } from './store/useAuthStore'
 import { Route, Routes } from 'react-router-dom'
 import './App.css'
 import { Home } from './pages/Home'
@@ -17,6 +19,8 @@ import { Footer } from './components/Footer'
 import { Header } from './components/Header'
 
 function App() {
+  const initializeAuth = useAuthStore(state => state.initializeAuth);
+  useEffect(() => initializeAuth(), [initializeAuth]);
   return (
     <>
       <Header />

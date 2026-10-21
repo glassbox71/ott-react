@@ -1,5 +1,7 @@
 // Merge these match blocks inside your existing service cloud.firestore /
 // match /databases/{database}/documents block. Do not replace existing rules.
+// Firebase Anonymous Auth users have a verified UID and are allowed here.
+// Requests with no Firebase authentication remain denied.
 match /sportsRooms/{gameId}/messages/{messageId} {
   allow read: if request.auth != null;
   allow create: if request.auth != null

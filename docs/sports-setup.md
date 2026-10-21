@@ -29,7 +29,7 @@ npx eslint src/pages/Sports.jsx src/features/sports/*.js src/features/sports/*.j
 
 ## Firebase 채팅
 
-기존 Firebase Google 로그인을 사용합니다. `sportsRooms/{sport}-youtube-{videoId}/messages`에 메시지를 저장하고 최근 100개를 `onSnapshot`으로 구독합니다. 서버 동기화가 확인된 경우에만 전송을 활성화합니다. 방송 선택 변경 시 구독을 해제하므로 다른 방송의 채팅이 섞이지 않습니다.
+기존 Google 로그인 사용자는 해당 계정을 사용하며, 비로그인 방문자는 Firebase Anonymous Auth로 자동 입장합니다. 운영 프로젝트에서 Anonymous 제공자를 활성화해야 합니다. [구글 로그인·게스트 채팅 진단](auth-and-guest-chat.md)을 참고하세요. `sportsRooms/{sport}-youtube-{videoId}/messages`에 메시지를 저장하고 최근 100개를 `onSnapshot`으로 구독합니다. 서버 동기화가 확인된 경우에만 전송을 활성화합니다. 방송 선택 변경 시 구독을 해제하므로 다른 방송의 채팅이 섞이지 않습니다.
 
 `presence` 하위 컬렉션은 탭별 30초 하트비트와 90초 유효 기간을 사용합니다. 최근 500개 세션의 고유 로그인 사용자 수이며 익명 시청자 수와는 다릅니다. 종료·충돌로 남은 오래된 세션은 운영 서버에서 정리해야 합니다.
 
@@ -40,9 +40,9 @@ npx eslint src/pages/Sports.jsx src/features/sports/*.js src/features/sports/*.j
 Java 21 이상과 Firestore 에뮬레이터가 필요합니다. 에뮬레이터는 실제 운영 Firebase 설정이나 로그인 비밀번호를 사용하지 않습니다.
 
 ```sh
-npx firebase-tools@15.34.0 emulators:start --only firestore --project demo-ott-sports --config firebase.emulators.json
+npx firebase-tools@15.34.0 emulators:start --only auth,firestore --project demo-ott-sports --config firebase.emulators.json
 # 별도 터미널
-FIRESTORE_EMULATOR_HOST=127.0.0.1:18080 npm run test:sports:chat
+FIRESTORE_EMULATOR_HOST=127.0.0.1:18080 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:19099 npm run test:sports:chat
 ```
 
 테스트는 문서의 실제 보안 규칙을 로드해 서로 다른 인증 UID 두 개의 실시간 메시지 송수신, 방송별 격리, 미인증 읽기 거부, 발신 UID 위조·긴 메시지·수정·삭제 거부, presence 소유자를 확인합니다. `FIRESTORE_EMULATOR_HOST`가 없으면 이 테스트는 명시적으로 SKIP 처리합니다. SKIP을 통과로 보고하면 안 됩니다.

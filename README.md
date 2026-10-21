@@ -25,3 +25,5 @@ If you are developing a production application, we recommend using TypeScript wi
 
 - [설정·실행·검증 안내](docs/sports-setup.md)
 - [학생용 재사용 프롬프트](docs/sports-prompt.md)
+
+- [구글 로그인 진단·게스트 채팅 설정](docs/auth-and-guest-chat.md)

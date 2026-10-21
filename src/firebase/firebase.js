@@ -12,7 +12,10 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
+const required = { VITE_FIREBASE_API_KEY: firebaseConfig.apiKey, VITE_FIREBASE_AUTH_DOMAIN: firebaseConfig.authDomain, VITE_FIREBASE_PROJECT_ID: firebaseConfig.projectId, VITE_FIREBASE_APP_ID: firebaseConfig.appId };
+export const missingFirebaseConfig = Object.entries(required).filter(([, value]) => !value).map(([name]) => name);
 const configured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
+export const googleLoginConfigured = missingFirebaseConfig.length === 0;
 const app = configured ? initializeApp(firebaseConfig) : null;
 export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;

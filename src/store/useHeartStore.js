@@ -8,8 +8,8 @@ export const useHeartStore = create((set, get) => ({
     hearts: [],
     // 찜리스트를 배열에 저장할 메서드
     onAddHearts: async (item) => {
-        const user = auth.currentUser;
-        if (!user) return;
+        const user = auth?.currentUser;
+        if (!user || user.isAnonymous) return;
         const currentMember = useAuthStore.getState().currentMember;
         if (!currentMember) return;
         try {
@@ -44,10 +44,10 @@ export const useHeartStore = create((set, get) => ({
     },
     // 저장된 찜리스트 불러오기
     onLoadHearts: async () => {
-        const user = auth.currentUser;
-        if (!user) return;
+        const user = auth?.currentUser;
+        if (!user || user.isAnonymous) { set({ hearts: [] }); return; }
         const currentMember = useAuthStore.getState().currentMember;
-        if (!currentMember) return;
+        if (!currentMember) { set({ hearts: [] }); return; }
         try {
             //firebase 사용자계정
             const userDocRef = doc(db, "users", user.uid);
@@ -77,8 +77,8 @@ export const useHeartStore = create((set, get) => ({
     },
     // 삭제
     onRemoveHearts: async (id) => {
-        const user = auth.currentUser;
-        if (!user) return;
+        const user = auth?.currentUser;
+        if (!user || user.isAnonymous) return;
         const currentMember = useAuthStore.getState().currentMember;
         if (!currentMember) return;
         try {
