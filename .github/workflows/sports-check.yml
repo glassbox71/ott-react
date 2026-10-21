@@ -22,6 +22,7 @@ jobs:
       - run: npm ci
       - run: npm run test:sports
       - run: npm run test:auth
+      - run: npm run test:sports:ui
       - run: npx eslint src/App.jsx src/store/useAuthStore.js src/store/useHeartStore.js src/pages/Login.jsx src/pages/SelectMember.jsx src/firebase/firebase.js src/features/auth/*.js src/pages/Sports.jsx src/features/sports/*.js src/features/sports/*.jsx
       - run: npm run build
       - name: Two-user Firestore integration and rules

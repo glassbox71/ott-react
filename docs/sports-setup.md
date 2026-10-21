@@ -29,7 +29,7 @@ npx eslint src/pages/Sports.jsx src/features/sports/*.js src/features/sports/*.j
 
 ## Firebase 채팅
 
-기존 Google 로그인 사용자는 해당 계정을 사용하며, 비로그인 방문자는 Firebase Anonymous Auth로 자동 입장합니다. 운영 프로젝트에서 Anonymous 제공자를 활성화해야 합니다. [구글 로그인·게스트 채팅 진단](auth-and-guest-chat.md)을 참고하세요. `sportsRooms/{sport}-youtube-{videoId}/messages`에 메시지를 저장하고 최근 100개를 `onSnapshot`으로 구독합니다. 서버 동기화가 확인된 경우에만 전송을 활성화합니다. 방송 선택 변경 시 구독을 해제하므로 다른 방송의 채팅이 섞이지 않습니다.
+기존 Google 로그인 사용자는 해당 계정을 사용하며, 비로그인 방문자는 Firebase Anonymous Auth로 자동 입장합니다. 운영 프로젝트에서 Anonymous 제공자를 활성화해야 합니다. [구글 로그인·게스트 채팅 진단](auth-and-guest-chat.md)을 참고하세요. `sportsRooms/{sport}-youtube-{videoId}/messages`에 메시지를 저장하고 최근 100개를 `onSnapshot`으로 구독합니다. 최초 서버 동기화가 확인되면 전송을 활성화합니다. 이후 일시적인 오프라인에서도 메시지를 숨기지 않고 전송 대기를 표시합니다. 저장 거부 시 작성 내용을 화면에 남기고 재전송을 제공합니다. 접속자 집계 실패는 메시지 송수신과 분리합니다. [저장·접속자 오류 진단](chat-troubleshooting.md)을 참고하세요. 방송 선택 변경 시 구독을 해제하므로 다른 방송의 채팅이 섞이지 않습니다.
 
 `presence` 하위 컬렉션은 탭별 30초 하트비트와 90초 유효 기간을 사용합니다. 최근 500개 세션의 고유 로그인 사용자 수이며 익명 시청자 수와는 다릅니다. 종료·충돌로 남은 오래된 세션은 운영 서버에서 정리해야 합니다.
 

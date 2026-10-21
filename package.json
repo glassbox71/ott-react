@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test:sports": "node --test tests/sports.test.mjs",
     "test:sports:chat": "node --test tests/sports-firestore.test.mjs",
-    "test:auth": "node --test tests/auth.test.mjs"
+    "test:auth": "node --test tests/auth.test.mjs",
+    "test:sports:ui": "node --test tests/sports-chat-ui.test.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -35,6 +36,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.6",
     "globals": "^17.12.0",
+    "playwright-core": "^1.64.1",
     "vite": "^8.3.0"
   }
 }

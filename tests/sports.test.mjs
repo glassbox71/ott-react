@@ -76,3 +76,16 @@ test('fewer than five broadcasts remain the actual count without padding', () =>
   assert.equal(verifiedBroadcasts([video()]).length, 1);
   assert.deepEqual(verifiedBroadcasts([]), []);
 });
+
+test('chat keeps a rejected draft after Firestore rollback and merges acknowledgements by ID', async () => {
+  const { visibleMessages, chatFailure } = await import('../src/features/sports/chat.js');
+  const pending = { id: 'outgoing', text: '응원', status: 'pending', createdAtMs: 2 };
+  assert.equal(visibleMessages([pending], [pending]).length, 1);
+  const failed = { ...pending, status: 'failed' };
+  assert.deepEqual(visibleMessages([], [failed]), [failed]);
+  const saved = { ...pending, status: 'saved' };
+  assert.deepEqual(visibleMessages([saved], []), [saved]);
+  assert.match(chatFailure({ code: 'permission-denied' }, '메시지 저장 실패'), /보안 규칙.*permission-denied/);
+  assert.match(chatFailure({ code: 'resource-exhausted' }, '메시지 저장 실패'), /사용 한도/);
+  assert.doesNotMatch(chatFailure({ code: 'unknown-secret-value', message: 'private-key' }, '실패'), /secret|private/);
+});

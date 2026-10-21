@@ -6,7 +6,7 @@ import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { ensureChatIdentity } from '../src/features/auth/session.js';
 import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, disableNetwork, doc, enableNetwork, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 
 const emulator = process.env.FIRESTORE_EMULATOR_HOST;
 test('two-user chat, room isolation and Firestore authorization', { skip: !emulator, timeout: 30000 }, async t => {
@@ -46,6 +46,24 @@ test('two-user chat, room isolation and Firestore authorization', { skip: !emula
       const other = await getDocs(collection(bob, 'sportsRooms', 'baseball-youtube-another', 'messages'));
       assert.equal(other.size, 0);
     });
+    await t.test('an offline message is pending until reconnection and then reaches the second user', async () => {
+      await disableNetwork(alice);
+      let unsubscribe; let timer; let write;
+      try {
+        const pending = new Promise((resolve, reject) => {
+          timer = setTimeout(() => reject(new Error('No pending offline snapshot arrived')), 10000);
+          unsubscribe = onSnapshot(collection(alice, 'sportsRooms', room, 'messages'), { includeMetadataChanges: true }, snapshot => {
+            if (snapshot.metadata.fromCache && snapshot.docs.some(item => item.data().text === '오프라인 응원' && item.metadata.hasPendingWrites)) resolve();
+          }, reject);
+        });
+        write = addDoc(collection(alice, 'sportsRooms', room, 'messages'), message('오프라인 응원'));
+        await pending;
+        await enableNetwork(alice);
+        await write;
+        const received = await getDocs(collection(bob, 'sportsRooms', room, 'messages'));
+        assert.ok(received.docs.some(item => item.data().text === '오프라인 응원'));
+      } finally { clearTimeout(timer); unsubscribe?.(); await enableNetwork(alice); await write; }
+    });
     await t.test('unauthenticated readers and forged sender IDs are rejected', async () => {
       await assertFails(getDocs(collection(unauthenticated, 'sportsRooms', room, 'messages')));
       await assertFails(addDoc(collection(alice, 'sportsRooms', room, 'messages'), { ...message('spoof'), uid: 'bob' }));
@@ -59,6 +77,7 @@ test('two-user chat, room isolation and Firestore authorization', { skip: !emula
     await t.test('presence allows another viewer to read but only the owner may remove a session', async () => {
       const presence = doc(alice, 'sportsRooms', room, 'presence', 'alice-session');
       await assertSucceeds(setDoc(presence, { uid: 'alice', lastSeen: serverTimestamp() }));
+      await assertSucceeds(setDoc(presence, { uid: 'alice', lastSeen: serverTimestamp() })); // heartbeat updates the existing session
       const viewers = await getDocs(collection(bob, 'sportsRooms', room, 'presence'));
       assert.equal(viewers.docs[0].data().uid, 'alice');
       await assertFails(deleteDoc(doc(bob, 'sportsRooms', room, 'presence', 'alice-session')));
